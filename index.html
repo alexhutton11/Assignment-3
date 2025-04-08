@@ -1,0 +1,93 @@
+<html>
+  <head>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script> <!-- Load libraries d3.js, a-frame -->
+  </head>
+  <body>
+    <a-scene background ="color: #000000"> <!-- Set background to black-->
+      <a-entity camera look-controls wasd-controls position="10 15 35"></a-entity>
+      <a-entity light="type: ambient; intensity: 1"></a-entity>
+      <a-entity light="type: directional" position="0 10 10"></a-entity>
+
+      <script>
+
+        d3.csv("vgsales.csv").then(function(data) { // Import/load data with d3.js
+          const genres = [...new Set(data.map(d => d.Genre))]; // functions to assign data in the data as const
+          const rawYears = data.map(d => parseInt(d.Year));
+          const years = [...new Set(rawYears)]
+            .filter(y => y >= 1999 && y <= 2012) // Filter to only use years from 1999-2012 so the graph isn't too big
+            .sort((a, b) => a - b) // Sort years in ascending
+            .map(y => y.toString()); // Turn years into strings for z axis
+
+          const matrix = genres.map(() => Array(years.length).fill(0));  // Define matrix with the length of max years (filtered)
+
+          // Loop through matrix and fill, get total sales per genre
+          data.forEach(d => {
+            const genreIndex = genres.indexOf(d.Genre);
+            const yearIndex = years.indexOf(d.Year);
+            const sales = parseFloat(d.Global_Sales);
+            if (!isNaN(sales)) {
+              matrix[genreIndex][yearIndex] += sales;
+            }
+          });
+
+          const scene = document.querySelector('a-scene'); // Scene to be used 
+
+          // Create labels for each year
+          years.forEach((year, z) => {
+            const label = document.createElement('a-text');
+            label.setAttribute('value', year);
+            label.setAttribute('position', `-2 0 ${z * 2}`); // Position of y axis
+            label.setAttribute('rotation', '-90 0 0');
+            label.setAttribute('color', 'white');
+            label.setAttribute('side', 'double');
+            label.setAttribute('scale', '2 2 2');
+            scene.appendChild(label);
+          });
+
+          // Create labels for each genre
+          genres.forEach((genre, x) => {
+            const label = document.createElement('a-text');
+            label.setAttribute('value', genre);
+            label.setAttribute('position', `${x * 2} 0 -2`); // Position of x axis
+            label.setAttribute('rotation', '-90 0 90');
+            label.setAttribute('color', 'white');
+            label.setAttribute('side', 'double');
+            label.setAttribute('scale', '2 2 2');
+            scene.appendChild(label);
+          });
+
+          // Assign each genre a colour
+        const genreColorMap = {};
+        genres.forEach((genre, i) => {
+          const genreColor = Math.floor((i / genres.length) * 360);  // DIfferent colour based on genre
+          genreColorMap[genre] = genreColor;
+        });
+
+        // Loop through matrix, access a-box element and set attributes based on values.
+        matrix.forEach((row, x) => {
+          row.forEach((val, z) => {
+            const height = val * 0.5; // Smaller otherwise wouldn't be visible
+            const y = height / 2; // Set to half so starts from bottom
+
+            const genre = genres[x];
+            const baseHue = genreColorMap[genre];
+            const lightness = 30 + Math.min(40, height * 5); 
+            const color = `hsl(${baseHue}, 100%, ${lightness}%)`; 
+
+            const bar = document.createElement('a-box');
+            bar.setAttribute('position', `${x * 2} ${y} ${z * 2}`);
+            bar.setAttribute('height', height);
+            bar.setAttribute('width', 1);
+            bar.setAttribute('depth', 1);
+            bar.setAttribute('color', color);
+            scene.appendChild(bar);
+          });
+        });
+
+        });
+      </script>
+    </a-scene>
+  </body>
+</html>
+
